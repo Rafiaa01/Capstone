@@ -1,6 +1,6 @@
-# Capstone — Frontend AI Engineering
+# Capstone — Backend AI Engineering
 
-Capstone project for the FlyRank AI Internship, Frontend AI Engineering track.
+Capstone project for the FlyRank AI Internship, Backend AI Engineering track.
 
 ## About
 This repository documents my work building AI-assisted frontend applications, combining modern frontend engineering practices with AI tooling (Claude Code / Cursor) for faster, higher-quality development.
