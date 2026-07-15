@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
@@ -8,7 +10,7 @@ app = FastAPI(
 )
 
 
-tasks = [
+INITIAL_TASKS = [
     {
         "id": 1,
         "title": "Learn FastAPI",
@@ -25,6 +27,8 @@ tasks = [
         "done": True,
     },
 ]
+
+tasks = [task.copy() for task in INITIAL_TASKS]
 
 
 @app.get(
@@ -51,11 +55,33 @@ def health():
 
 @app.get(
     "/tasks",
-    summary="List all tasks",
-    description="Returns every task currently stored in memory.",
+    summary="List and filter tasks",
+    description=(
+        "Returns all tasks. Optionally filters by completion status "
+        "or searches task titles."
+    ),
 )
-def get_tasks():
-    return tasks
+def get_tasks(
+    done: Optional[bool] = None,
+    search: Optional[str] = None,
+):
+    filtered_tasks = tasks
+
+    if done is not None:
+        filtered_tasks = [
+            task for task in filtered_tasks
+            if task["done"] == done
+        ]
+
+    if search is not None and search.strip():
+        search_term = search.strip().lower()
+
+        filtered_tasks = [
+            task for task in filtered_tasks
+            if search_term in task["title"].lower()
+        ]
+
+    return filtered_tasks
 
 
 @app.get(
@@ -138,7 +164,7 @@ async def create_task(request: Request):
 @app.put(
     "/tasks/{task_id}",
     summary="Update a task",
-    description="Updates the title, completion status, or both for an existing task.",
+    description="Updates the title, completion status, or both.",
     openapi_extra={
         "requestBody": {
             "required": True,
@@ -239,4 +265,34 @@ def delete_task(task_id: int):
         status_code=404,
         content={"error": f"Task {task_id} not found"},
     )
-    
+
+
+@app.get(
+    "/stats",
+    summary="View task statistics",
+    description="Returns the total number of completed and open tasks.",
+)
+def get_stats():
+    done_count = sum(1 for task in tasks if task["done"])
+    total_count = len(tasks)
+
+    return {
+        "total": total_count,
+        "done": done_count,
+        "open": total_count - done_count,
+    }
+
+
+@app.post(
+    "/reset",
+    summary="Reset tasks",
+    description="Restores the original three example tasks.",
+)
+def reset_tasks():
+    tasks.clear()
+    tasks.extend(task.copy() for task in INITIAL_TASKS)
+
+    return {
+        "message": "Tasks reset successfully",
+        "tasks": tasks,
+    }

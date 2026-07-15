@@ -1,0 +1,48 @@
+Regenerate the FastAPI Task API from my previous request, but correct the following requirements precisely.
+
+All request validation failures must return HTTP status `400`, not FastAPI's default `422`.
+
+Every error response must use this exact JSON structure:
+
+```json
+{
+  "error": "Message"
+}
+```
+
+Do not return errors using a `detail` key.
+
+For POST:
+
+* `title` is required
+* `title` must be a string
+* `title` cannot be empty or contain only spaces
+* invalid input must return `400`
+
+For PUT:
+
+* treat the request as a partial update
+* allow `title`, `done`, or both
+* do not overwrite a field that was not supplied
+* reject an empty JSON object with `400`
+* reject a body containing neither `title` nor `done` with `400`
+* reject an empty or whitespace-only title with `400`
+* reject `done` unless it is a real JSON Boolean
+* validate the entire body before changing the stored task
+
+For task IDs:
+
+* calculate a new ID using the current maximum ID plus one
+* do not use `len(tasks) + 1`
+* unknown task IDs must return `404`
+
+For DELETE:
+
+* return exactly `204 No Content`
+* return no JSON and no text in the response body
+
+Keep all data in an in-memory Python list. Do not add a database, persistent file storage, authentication, or additional services.
+
+Keep Swagger UI available at `/docs`, and ensure POST and PUT display editable JSON request bodies.
+
+Return the complete corrected program as one `main.py` file.

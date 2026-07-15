@@ -209,3 +209,57 @@ The project was developed through the following stages:
 6. Swagger UI documentation
 7. GitHub publication and project documentation
 
+## AI vs Me
+
+### First Prompt
+
+My first prompt asked an AI assistant to build the same in-memory FastAPI Task API that I had already built manually.
+
+> Paste the complete contents of `ai-version/prompt-v1.txt` here.
+
+### Testing the AI Version
+
+The AI-generated application [started successfully on the first attempt / did not start successfully on the first attempt].
+
+| Test                 | Expected |          Actual | Result      |
+| -------------------- | -------: | --------------: | ----------- |
+| `GET /tasks`         |      200 | [actual status] | [Pass/Fail] |
+| `GET /tasks/1`       |      200 | [actual status] | [Pass/Fail] |
+| `POST /tasks`        |      201 | [actual status] | [Pass/Fail] |
+| `PUT /tasks/{id}`    |      200 | [actual status] | [Pass/Fail] |
+| `DELETE /tasks/{id}` |      204 | [actual status] | [Pass/Fail] |
+| Unknown task ID      |      404 | [actual status] | [Pass/Fail] |
+| Missing POST title   |      400 | [actual status] | [Pass/Fail] |
+| Empty PUT body       |      400 | [actual status] | [Pass/Fail] |
+| Invalid `done` value |      400 | [actual status] | [Pass/Fail] |
+
+### What the AI Did Better
+
+The AI used [describe a real improvement, such as Pydantic request models, helper functions, type annotations, or reusable task lookup logic]. This made [describe the actual benefit] clearer than my version.
+
+I understand how it works: [briefly explain the AI's technique in your own words].
+
+### What the AI Got Wrong or Ignored
+
+1. The AI [describe the first concrete difference].
+2. It [describe the second concrete difference].
+3. It [describe the third concrete difference].
+
+For example, if these genuinely happened:
+
+* It returned `422` instead of the required `400`.
+* It used `{"detail": "..."}` instead of `{"error": "..."}`.
+* It generated IDs using `len(tasks) + 1`.
+* It returned content with a `204` DELETE response.
+
+### What My Prompt Forgot to Specify
+
+My first prompt did not clearly explain [describe something genuinely missing or ambiguous].
+
+Because I left this unspecified, the AI decided to [describe the decision made by the generated code]. This showed me that small gaps in a specification can produce behaviour I did not intend.
+
+### The Rematch
+
+I improved my prompt by making the validation status codes, error JSON structure, ID generation, partial-update behaviour, and DELETE response requirements more explicit.
+
+In the second version, [write one sentence explaining what genuinely changed, such as: “the missing-title request returned 400 instead of 422, and DELETE returned a correct empty 204 response”].

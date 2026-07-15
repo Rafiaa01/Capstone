@@ -1,0 +1,72 @@
+Create a complete REST API using Python and FastAPI.
+
+The application must store tasks in a normal Python list while the server is running. Do not use a database, JSON file, external service, authentication system, or unnecessary folder structure.
+
+Each task must contain:
+
+* `id`: integer
+* `title`: string
+* `done`: Boolean
+
+Start with three example tasks already stored in memory.
+
+Create these endpoints:
+
+* `GET /` returns information about the API
+* `GET /health` returns `{"status": "ok"}`
+* `GET /tasks` returns all tasks
+* `GET /tasks/{task_id}` returns one task
+* `POST /tasks` creates a task
+* `PUT /tasks/{task_id}` updates an existing task
+* `DELETE /tasks/{task_id}` deletes a task
+
+The POST request body must accept:
+
+```json
+{
+  "title": "Buy milk"
+}
+```
+
+When a task is created, assign the next available numeric ID, set `done` to `false`, add the task to the in-memory list, and return the created task with status `201`.
+
+For PUT, allow the client to update `title`, `done`, or both. Fields that are not supplied must remain unchanged.
+
+Use these HTTP status codes:
+
+* `200` for successful GET and PUT requests
+* `201` for successful POST requests
+* `204` for successful DELETE requests
+* `400` for invalid request bodies
+* `404` when the requested task ID does not exist
+
+Validation rules:
+
+* POST with a missing title must return `400`
+* POST with an empty or whitespace-only title must return `400`
+* PUT with an empty body must return `400`
+* PUT with neither `title` nor `done` must return `400`
+* PUT with an empty title must return `400`
+* PUT with a non-Boolean `done` value must return `400`
+
+Every error must be returned as JSON using this format:
+
+```json
+{
+  "error": "Explanation of the problem"
+}
+```
+
+For an unknown task, return an error such as:
+
+```json
+{
+  "error": "Task 99 not found"
+}
+```
+
+A successful DELETE request must return status `204` with a completely empty response body.
+
+The API must include Swagger UI at `/docs`. Add useful summaries and descriptions so every endpoint is understandable and testable through the Swagger “Try it out” feature.
+
+Place the complete program in one file named `main.py`. Also provide the command required to start the server on localhost.

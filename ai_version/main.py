@@ -1,14 +1,16 @@
+from typing import Any
+
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 app = FastAPI(
-    title="Task API",
-    description="A simple in-memory CRUD API for managing tasks.",
+    title="AI Task API",
+    description="An AI-generated in-memory CRUD API for managing tasks.",
     version="1.0",
 )
 
 
-tasks = [
+INITIAL_TASKS = [
     {
         "id": 1,
         "title": "Learn FastAPI",
@@ -26,15 +28,33 @@ tasks = [
     },
 ]
 
+tasks = [task.copy() for task in INITIAL_TASKS]
+
+
+def find_task(task_id: int) -> dict[str, Any] | None:
+    """Find and return a task by ID."""
+    return next(
+        (task for task in tasks if task["id"] == task_id),
+        None,
+    )
+
+
+def error_response(message: str, status_code: int) -> JSONResponse:
+    """Return a consistent JSON error response."""
+    return JSONResponse(
+        status_code=status_code,
+        content={"error": message},
+    )
+
 
 @app.get(
     "/",
     summary="View API information",
-    description="Returns the API name, version, and main endpoint.",
+    description="Returns the API name, version, and available task endpoint.",
 )
 def root():
     return {
-        "name": "Task API",
+        "name": "AI Task API",
         "version": "1.0",
         "endpoints": ["/tasks"],
     }
@@ -43,7 +63,7 @@ def root():
 @app.get(
     "/health",
     summary="Check API health",
-    description="Checks whether the Task API server is running.",
+    description="Confirms that the API server is running.",
 )
 def health():
     return {"status": "ok"}
@@ -64,21 +84,22 @@ def get_tasks():
     description="Returns a single task using its numeric ID.",
 )
 def get_task(task_id: int):
-    for task in tasks:
-        if task["id"] == task_id:
-            return task
+    task = find_task(task_id)
 
-    return JSONResponse(
-        status_code=404,
-        content={"error": f"Task {task_id} not found"},
-    )
+    if task is None:
+        return error_response(
+            f"Task {task_id} not found",
+            404,
+        )
+
+    return task
 
 
 @app.post(
     "/tasks",
     status_code=201,
     summary="Create a task",
-    description="Creates a new task with the supplied title.",
+    description="Creates a task using a required title.",
     openapi_extra={
         "requestBody": {
             "required": True,
@@ -103,30 +124,41 @@ async def create_task(request: Request):
     try:
         body = await request.json()
     except Exception:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Request body must contain valid JSON"},
+        return error_response(
+            "Request body must contain valid JSON",
+            400,
         )
 
     if not isinstance(body, dict):
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Request body must be a JSON object"},
+        return error_response(
+            "Request body must be a JSON object",
+            400,
         )
 
     title = body.get("title")
 
-    if not isinstance(title, str) or not title.strip():
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Title is required and cannot be empty"},
+    if not isinstance(title, str):
+        return error_response(
+            "Title is required and must be text",
+            400,
         )
 
-    next_id = max((task["id"] for task in tasks), default=0) + 1
+    title = title.strip()
+
+    if not title:
+        return error_response(
+            "Title is required and cannot be empty",
+            400,
+        )
+
+    next_id = max(
+        (task["id"] for task in tasks),
+        default=0,
+    ) + 1
 
     new_task = {
         "id": next_id,
-        "title": title.strip(),
+        "title": title,
         "done": False,
     }
 
@@ -138,7 +170,7 @@ async def create_task(request: Request):
 @app.put(
     "/tasks/{task_id}",
     summary="Update a task",
-    description="Updates the title, completion status, or both for an existing task.",
+    description="Updates a task's title, completion status, or both.",
     openapi_extra={
         "requestBody": {
             "required": True,
@@ -163,62 +195,75 @@ async def create_task(request: Request):
     },
 )
 async def update_task(task_id: int, request: Request):
-    task = next(
-        (task for task in tasks if task["id"] == task_id),
-        None,
-    )
+    task = find_task(task_id)
 
     if task is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": f"Task {task_id} not found"},
+        return error_response(
+            f"Task {task_id} not found",
+            404,
         )
 
     try:
         body = await request.json()
     except Exception:
-        return JSONResponse(
-            status_code=400,
-            content={"error": "Request body must contain valid JSON"},
+        return error_response(
+            "Request body must contain valid JSON",
+            400,
         )
 
-    if not isinstance(body, dict) or not body:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "Request body must contain a title or done value"
-            },
+    if not isinstance(body, dict):
+        return error_response(
+            "Request body must be a JSON object",
+            400,
+        )
+
+    if not body:
+        return error_response(
+            "Request body must contain a title or done value",
+            400,
         )
 
     if "title" not in body and "done" not in body:
-        return JSONResponse(
-            status_code=400,
-            content={
-                "error": "Request body must contain a title or done value"
-            },
+        return error_response(
+            "Request body must contain a title or done value",
+            400,
         )
+
+    updated_title = task["title"]
+    updated_done = task["done"]
 
     if "title" in body:
         title = body["title"]
 
-        if not isinstance(title, str) or not title.strip():
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Title cannot be empty"},
+        if not isinstance(title, str):
+            return error_response(
+                "Title must be text",
+                400,
             )
 
-        task["title"] = title.strip()
+        title = title.strip()
+
+        if not title:
+            return error_response(
+                "Title cannot be empty",
+                400,
+            )
+
+        updated_title = title
 
     if "done" in body:
         done = body["done"]
 
         if not isinstance(done, bool):
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Done must be true or false"},
+            return error_response(
+                "Done must be true or false",
+                400,
             )
 
-        task["done"] = done
+        updated_done = done
+
+    task["title"] = updated_title
+    task["done"] = updated_done
 
     return task
 
@@ -227,16 +272,17 @@ async def update_task(task_id: int, request: Request):
     "/tasks/{task_id}",
     status_code=204,
     summary="Delete a task",
-    description="Permanently removes a task using its numeric ID.",
+    description="Deletes a task using its numeric ID.",
 )
 def delete_task(task_id: int):
-    for index, task in enumerate(tasks):
-        if task["id"] == task_id:
-            tasks.pop(index)
-            return Response(status_code=204)
+    task = find_task(task_id)
 
-    return JSONResponse(
-        status_code=404,
-        content={"error": f"Task {task_id} not found"},
-    )
-    
+    if task is None:
+        return error_response(
+            f"Task {task_id} not found",
+            404,
+        )
+
+    tasks.remove(task)
+
+    return Response(status_code=204)
