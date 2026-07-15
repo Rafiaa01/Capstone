@@ -1,7 +1,11 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
-app = FastAPI()
+app = FastAPI(
+    title="Task API",
+    description="A simple in-memory CRUD API for managing tasks.",
+    version="1.0",
+)
 
 
 tasks = [
@@ -23,7 +27,11 @@ tasks = [
 ]
 
 
-@app.get("/")
+@app.get(
+    "/",
+    summary="View API information",
+    description="Returns the API name, version, and main endpoint.",
+)
 def root():
     return {
         "name": "Task API",
@@ -32,17 +40,29 @@ def root():
     }
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    summary="Check API health",
+    description="Checks whether the Task API server is running.",
+)
 def health():
     return {"status": "ok"}
 
 
-@app.get("/tasks")
+@app.get(
+    "/tasks",
+    summary="List all tasks",
+    description="Returns every task currently stored in memory.",
+)
 def get_tasks():
     return tasks
 
 
-@app.get("/tasks/{task_id}")
+@app.get(
+    "/tasks/{task_id}",
+    summary="Get one task",
+    description="Returns a single task using its numeric ID.",
+)
 def get_task(task_id: int):
     for task in tasks:
         if task["id"] == task_id:
@@ -54,7 +74,31 @@ def get_task(task_id: int):
     )
 
 
-@app.post("/tasks", status_code=201)
+@app.post(
+    "/tasks",
+    status_code=201,
+    summary="Create a task",
+    description="Creates a new task with the supplied title.",
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["title"],
+                        "properties": {
+                            "title": {
+                                "type": "string",
+                                "example": "Buy milk",
+                            }
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
 async def create_task(request: Request):
     try:
         body = await request.json()
@@ -91,7 +135,33 @@ async def create_task(request: Request):
     return new_task
 
 
-@app.put("/tasks/{task_id}")
+@app.put(
+    "/tasks/{task_id}",
+    summary="Update a task",
+    description="Updates the title, completion status, or both for an existing task.",
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "type": "string",
+                                "example": "Buy milk and bread",
+                            },
+                            "done": {
+                                "type": "boolean",
+                                "example": True,
+                            },
+                        },
+                    }
+                }
+            },
+        }
+    },
+)
 async def update_task(task_id: int, request: Request):
     task = next(
         (task for task in tasks if task["id"] == task_id),
@@ -120,9 +190,7 @@ async def update_task(task_id: int, request: Request):
             },
         )
 
-    allowed_fields = {"title", "done"}
-
-    if not any(field in body for field in allowed_fields):
+    if "title" not in body and "done" not in body:
         return JSONResponse(
             status_code=400,
             content={
@@ -155,7 +223,12 @@ async def update_task(task_id: int, request: Request):
     return task
 
 
-@app.delete("/tasks/{task_id}", status_code=204)
+@app.delete(
+    "/tasks/{task_id}",
+    status_code=204,
+    summary="Delete a task",
+    description="Permanently removes a task using its numeric ID.",
+)
 def delete_task(task_id: int):
     for index, task in enumerate(tasks):
         if task["id"] == task_id:
