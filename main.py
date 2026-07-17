@@ -1,30 +1,27 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
+from repository import PostgresTaskRepository
+from service import TaskService
+
+load_dotenv()
+
+database_url = os.getenv("DATABASE_URL")
+
+if not database_url:
+    raise RuntimeError("DATABASE_URL is not configured.")
+
+repository = PostgresTaskRepository(database_url)
+service = TaskService(repository)
+
 app = FastAPI(
     title="Task API",
-    description="A simple in-memory CRUD API for managing tasks.",
-    version="1.0",
+    description="A PostgreSQL-backed CRUD API for managing tasks.",
+    version="2.0",
 )
-
-
-tasks = [
-    {
-        "id": 1,
-        "title": "Learn FastAPI",
-        "done": False,
-    },
-    {
-        "id": 2,
-        "title": "Build a Task API",
-        "done": False,
-    },
-    {
-        "id": 3,
-        "title": "Push the project to GitHub",
-        "done": True,
-    },
-]
 
 
 @app.get(
@@ -35,7 +32,7 @@ tasks = [
 def root():
     return {
         "name": "Task API",
-        "version": "1.0",
+        "version": "2.0",
         "endpoints": ["/tasks"],
     }
 
@@ -52,10 +49,10 @@ def health():
 @app.get(
     "/tasks",
     summary="List all tasks",
-    description="Returns every task currently stored in memory.",
+    description="Returns every task currently stored in PostgreSQL.",
 )
 def get_tasks():
-    return tasks
+    return service.get_all_tasks()
 
 
 @app.get(
@@ -64,14 +61,15 @@ def get_tasks():
     description="Returns a single task using its numeric ID.",
 )
 def get_task(task_id: int):
-    for task in tasks:
-        if task["id"] == task_id:
-            return task
+    task = service.get_task(task_id)
 
-    return JSONResponse(
-        status_code=404,
-        content={"error": f"Task {task_id} not found"},
-    )
+    if task is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Task {task_id} not found"},
+        )
+
+    return task
 
 
 @app.post(
@@ -122,23 +120,13 @@ async def create_task(request: Request):
             content={"error": "Title is required and cannot be empty"},
         )
 
-    next_id = max((task["id"] for task in tasks), default=0) + 1
-
-    new_task = {
-        "id": next_id,
-        "title": title.strip(),
-        "done": False,
-    }
-
-    tasks.append(new_task)
-
-    return new_task
+    return service.create_task(title.strip())
 
 
 @app.put(
     "/tasks/{task_id}",
     summary="Update a task",
-    description="Updates the title, completion status, or both for an existing task.",
+    description="Updates the title, completion status, or both.",
     openapi_extra={
         "requestBody": {
             "required": True,
@@ -163,12 +151,9 @@ async def create_task(request: Request):
     },
 )
 async def update_task(task_id: int, request: Request):
-    task = next(
-        (task for task in tasks if task["id"] == task_id),
-        None,
-    )
+    existing_task = service.get_task(task_id)
 
-    if task is None:
+    if existing_task is None:
         return JSONResponse(
             status_code=404,
             content={"error": f"Task {task_id} not found"},
@@ -198,6 +183,9 @@ async def update_task(task_id: int, request: Request):
             },
         )
 
+    title = None
+    done = None
+
     if "title" in body:
         title = body["title"]
 
@@ -207,7 +195,7 @@ async def update_task(task_id: int, request: Request):
                 content={"error": "Title cannot be empty"},
             )
 
-        task["title"] = title.strip()
+        title = title.strip()
 
     if "done" in body:
         done = body["done"]
@@ -218,9 +206,19 @@ async def update_task(task_id: int, request: Request):
                 content={"error": "Done must be true or false"},
             )
 
-        task["done"] = done
+    updated_task = service.update_task(
+        task_id=task_id,
+        title=title,
+        done=done,
+    )
 
-    return task
+    if updated_task is None:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Task {task_id} not found"},
+        )
+
+    return updated_task
 
 
 @app.delete(
@@ -230,13 +228,12 @@ async def update_task(task_id: int, request: Request):
     description="Permanently removes a task using its numeric ID.",
 )
 def delete_task(task_id: int):
-    for index, task in enumerate(tasks):
-        if task["id"] == task_id:
-            tasks.pop(index)
-            return Response(status_code=204)
+    deleted = service.delete_task(task_id)
 
-    return JSONResponse(
-        status_code=404,
-        content={"error": f"Task {task_id} not found"},
-    )
-    
+    if not deleted:
+        return JSONResponse(
+            status_code=404,
+            content={"error": f"Task {task_id} not found"},
+        )
+
+    return Response(status_code=204)

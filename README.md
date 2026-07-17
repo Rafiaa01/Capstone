@@ -263,3 +263,17 @@ Because I left this unspecified, the AI decided to [describe the decision made b
 I improved my prompt by making the validation status codes, error JSON structure, ID generation, partial-update behaviour, and DELETE response requirements more explicit.
 
 In the second version, [write one sentence explaining what genuinely changed, such as: “the missing-title request returned 400 instead of 422, and DELETE returned a correct empty 204 response”].
+## Stage 6
+
+The in-memory repository has been replaced with PostgreSQL.
+
+The API endpoints and service layer remain unchanged.
+
+Docker Compose starts both the FastAPI application and PostgreSQL.
+
+Data persistence was verified by:
+
+1. Creating a task.
+2. Stopping the containers.
+3. Restarting Docker Compose.
+4. Confirming the task still existed.
